@@ -1,0 +1,64 @@
+name: Check & release
+on:
+  push:
+  schedule:
+    - cron: "47 * * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Check versions
+    runs-on: ubuntu-latest
+
+    outputs:
+      current: ${{ steps.current.outputs.v }}
+      latest: ${{ steps.latest.outputs.v }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Check current version
+        id: current
+        run: grep "^Version:" lego.spec | sed -e "s/^Version:\s*/v=/" >> $GITHUB_OUTPUT
+
+      - name: Check latest version
+        id: latest
+        run: curl -sL https://api.github.com/repos/go-acme/lego/releases/latest | jq -r ".tag_name" | sed -e "s/^v/v=/" >> $GITHUB_OUTPUT
+
+  release:
+    name: Release new version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    needs:
+      - check
+    if: ${{ needs.check.outputs.current != needs.check.outputs.latest }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup git config
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Update spec version
+        run: sed -i -r "s/^(Version:\s*).*/\1${{ needs.check.outputs.latest }}/" lego.spec
+
+      - name: Rest spec release
+        run: sed -i -r "s/^(Release:\s*).*/\11/" lego.spec
+
+      - name: Delete old tarballs
+        run: rm lego_*.tar.gz
+
+      - name: Download new tarballs
+        run: curl -L --remote-name-all --silent https://github.com/go-acme/lego/releases/download/v${{ needs.check.outputs.latest }}/lego_v${{ needs.check.outputs.latest }}_linux_{amd64,arm64}.tar.gz
+
+      - name: Commit changes to repository
+        run: |
+          git add -A
+          git commit -m "Release version ${{ needs.check.outputs.latest }}"
+          git push origin main
