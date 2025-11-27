@@ -24,7 +24,7 @@ jobs:
 
       - name: Check latest version
         id: latest
-        run: curl -sL https://api.github.com/repos/go-acme/lego/releases/latest | jq -r ".tag_name" | sed -e "s/^v/v=/" >> $GITHUB_OUTPUT
+        run: curl -sL --retry 10 https://api.github.com/repos/go-acme/lego/releases/latest | jq -r ".tag_name" | sed -e "s/^v/v=/" >> $GITHUB_OUTPUT
 
   release:
     name: Release new version
