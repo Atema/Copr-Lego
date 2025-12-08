@@ -5,6 +5,9 @@ on:
     - cron: "47 * * * *"
   workflow_dispatch:
 
+env:
+  GH_TOKEN: ${{ github.token }}
+
 jobs:
   check:
     name: Check versions
@@ -24,7 +27,7 @@ jobs:
 
       - name: Check latest version
         id: latest
-        run: curl -sL --retry 10 https://api.github.com/repos/go-acme/lego/releases/latest | jq -r ".tag_name" | sed -e "s/^v/v=/" >> $GITHUB_OUTPUT
+        run: gh release view -R go-acme/lego --json tagName --jq .tagName | sed -e "s/^v/v=/" >> $GITHUB_OUTPUT
 
   release:
     name: Release new version
@@ -55,7 +58,7 @@ jobs:
         run: rm lego_*.tar.gz
 
       - name: Download new tarballs
-        run: curl -L --remote-name-all --silent https://github.com/go-acme/lego/releases/download/v${{ needs.check.outputs.latest }}/lego_v${{ needs.check.outputs.latest }}_linux_{amd64,arm64}.tar.gz
+        run: gh release download -R go-acme/lego -p '*_linux_*64.tar.gz'
 
       - name: Commit changes to repository
         run: |
