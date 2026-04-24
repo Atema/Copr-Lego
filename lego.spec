@@ -1,5 +1,5 @@
 Name:           lego
-Version:        4.35.1
+Version:        4.35.2
 Release:        1
 Summary:        Let's Encrypt client and ACME library written in Go
 
